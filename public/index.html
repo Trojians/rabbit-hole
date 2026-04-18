@@ -770,8 +770,9 @@ async function downloadResource(resourceId) {
 
   try {
     // Batch fetch: request multiple chunks in parallel
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 3;
     const chunks = new Array(resourceMeta.chunks.length);
+    const MAX_RETRIES = 3;
     
     for (let batchStart = 0; batchStart < resourceMeta.chunks.length; batchStart += BATCH_SIZE) {
       const batchEnd = Math.min(batchStart + BATCH_SIZE, resourceMeta.chunks.length);
@@ -791,12 +792,44 @@ async function downloadResource(resourceId) {
               size: chunkMeta.size,
               data: data
             };
+          }).catch(err => {
+            console.error(`[下载] 第 ${i+1} 片失败: ${err.message}`);
+            throw err;
           })
         );
       }
       
-      await Promise.all(batchPromises);
+      // Use allSettled to not fail entire batch on single chunk error, then retry failures
+      const results = await Promise.allSettled(batchPromises);
+      const failed = results.filter(r => r.status === 'rejected');
+      if (failed.length > 0) {
+        console.warn(`[下载] 批次有 ${failed.length} 片失败，将通过后续重试处理`);
+      }
       console.log(`[下载] 批次 ${batchStart+1}-${batchEnd}/${resourceMeta.chunks.length} 完成`);
+    }
+    
+    // Retry any missing chunks individually
+    for (let i = 0; i < chunks.length; i++) {
+      if (!chunks[i]) {
+        const chunkMeta = resourceMeta.chunks[i];
+        console.warn(`[下载] 重试第 ${i+1} 片: ${chunkMeta.hash.slice(0,12)}...`);
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          try {
+            const data = await fetchChunkFromServer(chunkMeta.hash);
+            if (data) {
+              chunks[i] = { index: chunkMeta.index, hash: chunkMeta.hash, size: chunkMeta.size, data };
+              console.log(`[下载] 第 ${i+1} 片重试成功`);
+              break;
+            }
+          } catch (e) {
+            console.warn(`[下载] 第 ${i+1} 片重试 ${attempt+1}/${MAX_RETRIES} 失败: ${e.message}`);
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          }
+        }
+        if (!chunks[i]) {
+          throw new Error(`碎片 ${i+1} 最终获取失败: ${chunkMeta.hash.slice(0,12)}...`);
+        }
+      }
     }
 
     const resource = {
@@ -819,24 +852,73 @@ async function downloadResource(resourceId) {
   }
 }
 
-function fetchChunkFromServer(chunkHash) {
+function fetchChunkFromServer(chunkHash, retries = 3) {
   return new Promise((resolve, reject) => {
+    // Check WS connection state before sending
+    if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+      if (retries > 0) {
+        console.warn(`[fetchChunk] WS 未就绪 (${state.ws?.readyState}), retry in 1s (${retries} left)`);
+        setTimeout(() => {
+          fetchChunkFromServer(chunkHash, retries - 1).then(resolve).catch(reject);
+        }, 1000);
+        return;
+      }
+      reject(new Error('WebSocket 未连接'));
+      return;
+    }
+
+    const ws = state.ws; // Capture current WS reference
+    let settled = false;
+
+    const cleanup = () => {
+      ws.removeEventListener('message', handler);
+      ws.removeEventListener('close', closeHandler);
+      clearTimeout(timeout);
+    };
+
     const timeout = setTimeout(() => {
-      state.ws.removeEventListener('message', handler);
+      if (settled) return;
+      settled = true;
+      cleanup();
       console.error(`[fetchChunk] 超时: ${chunkHash.slice(0,12)}...`);
-      reject(new Error('超时'));
-    }, 15000);
+      if (retries > 0) {
+        console.log(`[fetchChunk] 重试: ${chunkHash.slice(0,12)}... (剩余${retries}次)`);
+        setTimeout(() => {
+          fetchChunkFromServer(chunkHash, retries - 1).then(resolve).catch(reject);
+        }, 500);
+      } else {
+        reject(new Error('超时'));
+      }
+    }, 10000);
+
+    const closeHandler = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      console.warn(`[fetchChunk] WS 断开: ${chunkHash.slice(0,12)}...`);
+      if (retries > 0) {
+        setTimeout(() => {
+          fetchChunkFromServer(chunkHash, retries - 1).then(resolve).catch(reject);
+        }, 1000);
+      } else {
+        reject(new Error('连接断开'));
+      }
+    };
+
     const handler = (e) => {
+      if (settled) return;
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }
       if (msg.type === 'chunk_data' && msg.chunkHash === chunkHash) {
-        state.ws.removeEventListener('message', handler);
-        clearTimeout(timeout);
+        settled = true;
+        cleanup();
         resolve(msg.data);
       }
     };
-    state.ws.addEventListener('message', handler);
-    state.ws.send(JSON.stringify({ type: 'fetch_chunk', chunkHash }));
+
+    ws.addEventListener('message', handler);
+    ws.addEventListener('close', closeHandler);
+    ws.send(JSON.stringify({ type: 'fetch_chunk', chunkHash }));
   });
 }
 
