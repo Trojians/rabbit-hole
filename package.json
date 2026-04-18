@@ -1,0 +1,17 @@
+{
+  "name": "rabbit-hole",
+  "version": "1.0.0",
+  "description": "🐰 兔子洞 — 去中心化P2P通信网络",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "license": "MIT"
+}

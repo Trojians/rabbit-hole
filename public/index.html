@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐰 兔子洞 — Rabbit Hole</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0a0e17;
+  --bg2: #111827;
+  --bg3: #1a2236;
+  --bg4: #243049;
+  --accent: #f59e0b;
+  --accent2: #d97706;
+  --green: #10b981;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --text: #e5e7eb;
+  --text2: #9ca3af;
+  --border: #374151;
+}
+body { font-family: 'SF Pro', -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+
+/* ─── Layout ─── */
+.app { display: grid; grid-template-columns: 260px 1fr 300px; grid-template-rows: 56px 1fr; height: 100vh; }
+.topbar { grid-column: 1/-1; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 16px; }
+.sidebar { background: var(--bg2); border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
+.main { display: flex; flex-direction: column; overflow: hidden; }
+.rightpanel { background: var(--bg2); border-left: 1px solid var(--border); overflow-y: auto; }
+
+/* ─── Top Bar ─── */
+.logo { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.logo span { color: var(--accent); }
+.status { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--green); }
+.status .dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.carrot-display { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--accent); background: var(--bg3); padding: 6px 14px; border-radius: 20px; }
+.my-id { font-size: 12px; color: var(--text2); background: var(--bg3); padding: 4px 10px; border-radius: 12px; cursor: pointer; }
+.my-id:hover { background: var(--bg4); }
+
+/* ─── Sidebar ─── */
+.sidebar-section { padding: 12px 16px; }
+.sidebar-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.sidebar-title .count { background: var(--bg4); padding: 1px 8px; border-radius: 10px; font-size: 11px; }
+.peer-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+.peer-item:hover { background: var(--bg3); }
+.peer-item.active { background: var(--bg4); }
+.peer-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.peer-info { flex: 1; min-width: 0; }
+.peer-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.peer-meta { font-size: 11px; color: var(--text2); }
+.online-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; flex-shrink: 0; }
+
+/* ─── Tab Bar ─── */
+.tab-bar { display: flex; border-bottom: 1px solid var(--border); background: var(--bg2); }
+.tab { padding: 12px 20px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; color: var(--text2); }
+.tab:hover { color: var(--text); background: var(--bg3); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ─── Chat Area ─── */
+.chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.chat-input-area { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; }
+.chat-input:focus { border-color: var(--accent); }
+.send-btn { background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.send-btn:hover { background: var(--accent2); }
+
+/* ─── Messages ─── */
+.msg { max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-break: break-word; }
+.msg.mine { align-self: flex-end; background: var(--accent); color: #000; border-bottom-right-radius: 4px; }
+.msg.other { align-self: flex-start; background: var(--bg3); border-bottom-left-radius: 4px; }
+.msg.system { align-self: center; background: transparent; color: var(--text2); font-size: 12px; padding: 4px 12px; }
+.msg .sender { font-size: 11px; font-weight: 600; margin-bottom: 2px; opacity: 0.7; }
+.msg .time { font-size: 10px; opacity: 0.5; margin-top: 4px; text-align: right; }
+
+/* ─── Market ─── */
+.market { padding: 16px; flex: 1; overflow-y: auto; }
+.resource-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; transition: all 0.15s; }
+.resource-card:hover { border-color: var(--accent); }
+.resource-card.boosted { border-color: var(--accent); box-shadow: 0 0 12px rgba(245, 158, 11, 0.15); }
+.resource-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.resource-meta { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+.resource-actions { display: flex; gap: 8px; }
+.btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 12px; border: none; cursor: pointer; font-weight: 500; }
+.btn-download { background: var(--green); color: #000; }
+.btn-boost { background: var(--bg4); color: var(--accent); border: 1px solid var(--accent); }
+.btn-boost:hover { background: var(--accent); color: #000; }
+
+/* ─── Right Panel ─── */
+.panel-section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.panel-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 10px; }
+.node-list { display: flex; flex-direction: column; gap: 6px; }
+.node-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg3); border-radius: 6px; font-size: 12px; }
+.node-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+.stat-row .label { color: var(--text2); }
+.stat-row .value { font-weight: 600; color: var(--accent); }
+
+/* ─── Map Canvas ─── */
+#nodeMap { width: 100%; height: 200px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+
+/* ─── Upload Area ─── */
+.upload-area { padding: 16px; border-bottom: 1px solid var(--border); }
+.upload-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: var(--bg3); border: 2px dashed var(--border); border-radius: 10px; color: var(--text2); cursor: pointer; font-size: 14px; transition: all 0.15s; }
+.upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ─── Welcome Overlay ─── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.overlay.hidden { display: none; }
+.welcome-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 40px; text-align: center; max-width: 420px; width: 90%; }
+.welcome-card h1 { font-size: 28px; margin-bottom: 8px; }
+.welcome-card h1 span { color: var(--accent); }
+.welcome-card p { color: var(--text2); margin-bottom: 24px; font-size: 14px; line-height: 1.6; }
+.welcome-input { width: 100%; padding: 12px 16px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 16px; text-align: center; outline: none; margin-bottom: 16px; }
+.welcome-input:focus { border-color: var(--accent); }
+.enter-btn { width: 100%; padding: 14px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; }
+.enter-btn:hover { background: var(--accent2); }
+.welcome-key { font-family: monospace; font-size: 11px; color: var(--text2); background: var(--bg); padding: 8px; border-radius: 6px; margin-top: 16px; word-break: break-all; }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+/* ─── Notification toast ─── */
+.toast { position: fixed; top: 70px; right: 20px; background: var(--bg3); border: 1px solid var(--accent); padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 50; animation: slideIn 0.3s ease; }
+@keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ─── Mobile Bottom Nav ─── */
+.mobile-nav { display: none; }
+
+/* ─── Mobile Responsive ─── */
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 48px 1fr 52px;
+  }
+  .topbar {
+    padding: 0 12px;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .topbar .status { display: none; }
+  .topbar .my-id { display: none; }
+  .logo { font-size: 16px; }
+  .carrot-display { font-size: 13px; padding: 4px 10px; }
+
+  .sidebar {
+    display: none;
+    grid-column: 1;
+    grid-row: 2;
+    border-right: none;
+  }
+  .sidebar.mobile-active { display: flex; }
+
+  .main { min-width: 0; }
+  .main.mobile-hidden { display: none; }
+
+  .rightpanel {
+    display: none;
+    grid-column: 1;
+    grid-row: 2;
+    border-left: none;
+  }
+  .rightpanel.mobile-active { display: block; }
+
+  .tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { padding: 10px 14px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+
+  .chat-area { padding: 10px; }
+  .chat-input-area { padding: 8px 10px; }
+  .msg { max-width: 88%; font-size: 13px; }
+  .send-btn { padding: 8px 14px; font-size: 13px; }
+
+  .market { padding: 10px; }
+  .resource-card { padding: 10px; }
+  .resource-name { font-size: 14px; }
+  .upload-area { padding: 10px; }
+
+  .panel-section { padding: 12px 14px; }
+  .panel-title { font-size: 11px; }
+
+  /* Activity log fix */
+  #activityLog { word-break: break-word; overflow-wrap: break-word; }
+
+  /* Bottom nav */
+  .mobile-nav {
+    display: flex;
+    grid-column: 1;
+    grid-row: 3;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    justify-content: space-around;
+    align-items: center;
+  }
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 0;
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 10px;
+    flex: 1;
+    border: none;
+    background: none;
+    transition: color 0.15s;
+  }
+  .mobile-nav-item .nav-icon { font-size: 18px; }
+  .mobile-nav-item.active { color: var(--accent); }
+
+  .toast { top: 54px; right: 10px; font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .welcome-card { padding: 24px; }
+  .welcome-card h1 { font-size: 22px; }
+  .welcome-card p { font-size: 13px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Welcome Overlay -->
+<div class="overlay" id="welcomeOverlay">
+  <div class="welcome-card">
+    <h1>🐰 <span>兔子洞</span></h1>
+    <p>去中心化 P2P 通信网络<br>当现实世界的网络崩塌时，躲进这里，找到彼此</p>
+    <input type="text" class="welcome-input" id="nicknameInput" placeholder="给自己取个名字..." maxlength="20" autofocus>
+    <button class="enter-btn" id="enterBtn">🕳️ 钻进兔子洞</button>
+    <div class="welcome-key" id="keyInfo">正在生成密钥对...</div>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app">
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="logo">🐰 <span>兔子洞</span></div>
+    <div class="status"><div class="dot"></div> 已连接</div>
+    <div class="my-id" id="myId" title="点击复制公钥">--</div>
+    <div class="carrot-display">🥕 <span id="carrotCount">0</span></div>
+  </div>
+
+  <!-- Sidebar: Peer List -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">在线节点 <span class="count" id="peerCount">0</span></div>
+      <div id="peerList"></div>
+    </div>
+  </div>
+
+  <!-- Main Area -->
+  <div class="main">
+    <div class="tab-bar">
+      <div class="tab active" data-tab="chat" onclick="switchTab('chat')">💬 聊天室</div>
+      <div class="tab" data-tab="market" onclick="switchTab('market')">📦 资源市场</div>
+      <div class="tab" data-tab="map" onclick="switchTab('map')">🗺️ 节点地图</div>
+    </div>
+
+    <!-- Chat Tab -->
+    <div id="tabChat" style="flex:1;display:flex;flex-direction:column;">
+      <div class="chat-area" id="chatArea">
+        <div class="msg system">🐰 欢迎来到兔子洞 — 所有消息端到端加密，服务器无法读取</div>
+      </div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="输入消息..." autocomplete="off">
+        <button class="send-btn" id="sendBtn">发送</button>
+      </div>
+    </div>
+
+    <!-- Market Tab -->
+    <div id="tabMarket" style="flex:1;display:none;flex-direction:column;">
+      <div class="upload-area">
+        <label class="upload-btn" for="fileInput">
+          📤 上传资源文件
+          <input type="file" id="fileInput" style="display:none" multiple>
+        </label>
+      </div>
+      <div class="market" id="marketList">
+        <div class="msg system" style="padding:20px;text-align:center;">暂无资源，上传第一个吧</div>
+      </div>
+    </div>
+
+    <!-- Map Tab -->
+    <div id="tabMap" style="flex:1;display:none;flex-direction:column;padding:16px;">
+      <canvas id="nodeMap"></canvas>
+      <div style="margin-top:12px;">
+        <div class="sidebar-title">网络统计</div>
+        <div class="stat-row"><span class="label">在线节点</span><span class="value" id="statNodes">0</span></div>
+        <div class="stat-row"><span class="label">消息总数</span><span class="value" id="statMsgs">0</span></div>
+        <div class="stat-row"><span class="label">文件碎片</span><span class="value" id="statChunks">0</span></div>
+        <div class="stat-row"><span class="label">我的贡献</span><span class="value" id="statContrib">0 B</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="rightpanel">
+    <div class="panel-section">
+      <div class="panel-title">🔑 我的身份</div>
+      <div style="font-family:monospace;font-size:11px;color:var(--text2);word-break:break-all;" id="myPubKey">--</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px;">公钥即身份，无需注册</div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">🥕 胡萝卜经济</div>
+      <div class="stat-row"><span class="label">持有量</span><span class="value" id="panelCarrots">100</span></div>
+      <div class="stat-row"><span class="label">贡献存储</span><span class="value" id="panelContrib">0 B</span></div>
+      <div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.5;">
+        贡献带宽和存储赚取胡萝卜<br>竞价加速你的资源分发<br>中继消息也能赚取奖励
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">📡 存储节点</div>
+      <div class="node-list" id="chunkNodes">
+        <div style="font-size:12px;color:var(--text2);">上传文件后将显示存储分布</div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">📋 活动日志</div>
+      <div id="activityLog" style="font-size:11px;color:var(--text2);max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;word-break:break-word;"></div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Nav -->
+  <div class="mobile-nav">
+    <div class="mobile-nav-item active" data-view="chat" onclick="mobileSwitchView('chat')">
+      <span class="nav-icon">💬</span>
+      <span>聊天</span>
+    </div>
+    <div class="mobile-nav-item" data-view="market" onclick="mobileSwitchView('market')">
+      <span class="nav-icon">📦</span>
+      <span>市场</span>
+    </div>
+    <div class="mobile-nav-item" data-view="peers" onclick="mobileSwitchView('peers')">
+      <span class="nav-icon">👥</span>
+      <span>节点</span>
+    </div>
+    <div class="mobile-nav-item" data-view="map" onclick="mobileSwitchView('map')">
+      <span class="nav-icon">🗺️</span>
+      <span>地图</span>
+    </div>
+    <div class="mobile-nav-item" data-view="info" onclick="mobileSwitchView('info')">
+      <span class="nav-icon">ℹ️</span>
+      <span>信息</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// 🐰 Rabbit Hole Client
+// ═══════════════════════════════════════════════════
+
+const state = {
+  myKeyPair: null,
+  myPublicKey: '',
+  myNickname: '',
+  carrots: 100,
+  contributions: 0,
+  peers: new Map(),
+  ws: null,
+  dataChannels: new Map(), // peerKey -> RTCDataChannel
+  pc: new Map(),           // peerKey -> RTCPeerConnection
+  messageCount: 0,
+  chunks: new Set(),
+  selectedPeer: null,
+  seenMessages: new Set(),  // 消息去重
+  resourceMeta: new Map()   // resourceId -> resource metadata from server
+};
+
+const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+
+// ─── Crypto ───
+async function generateKeyPair() {
+  const saved = localStorage.getItem('rh_keypair');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      const privateKey = await crypto.subtle.importKey('jwk', parsed.privateJwk, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']);
+      const publicKey = await crypto.subtle.importKey('jwk', parsed.publicJwk, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['verify']);
+      const pubRaw = await crypto.subtle.exportKey('raw', publicKey);
+      const pubHex = Array.from(new Uint8Array(pubRaw)).map(b => b.toString(16).padStart(2, '0')).join('');
+      return { keyPair: { privateKey, publicKey }, publicKey: pubHex };
+    } catch (e) { console.warn('密钥恢复失败，重新生成', e); }
+  }
+  const keyPair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const pubRaw = await crypto.subtle.exportKey('raw', keyPair.publicKey);
+  const pubHex = Array.from(new Uint8Array(pubRaw)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const privateJwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
+  const publicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
+  localStorage.setItem('rh_keypair', JSON.stringify({ privateJwk, publicJwk }));
+  return { keyPair, publicKey: pubHex };
+}
+
+// ─── WebSocket Connection ───
+function connectWS() {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  state.ws = new WebSocket(`${protocol}//${location.host}`);
+
+  state.ws.onopen = () => {
+    log('🟢 已连接到信令服务器');
+    state.ws.send(JSON.stringify({
+      type: 'register',
+      publicKey: state.myPublicKey,
+      nickname: state.myNickname
+    }));
+  };
+
+  state.ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleServerMessage(msg);
+  };
+
+  state.ws.onclose = () => {
+    log('🔴 与服务器断开，3秒后重连...');
+    setTimeout(connectWS, 3000);
+  };
+}
+
+function handleServerMessage(msg) {
+  switch (msg.type) {
+    case 'registered':
+      state.carrots = msg.carrots;
+      updateCarrotDisplay();
+      msg.peers.forEach(p => {
+        if (p.publicKey !== state.myPublicKey) {
+          state.peers.set(p.publicKey, p);
+        }
+      });
+      msg.resources.forEach(r => {
+        state.resourceMeta.set(r.id, r);
+        addResourceCard(r);
+      });
+      renderPeerList();
+      log('✅ 注册成功，公钥: ' + state.myPublicKey.slice(0, 12) + '...');
+      // Try to connect to all existing peers via WebRTC
+      setTimeout(() => {
+        for (const pk of state.peers.keys()) {
+          createPeerConnection(pk, true);
+        }
+      }, 500);
+      break;
+
+    case 'peer_joined':
+      if (msg.peer.publicKey !== state.myPublicKey) {
+        state.peers.set(msg.peer.publicKey, msg.peer);
+        renderPeerList();
+        log(`🕳️ ${msg.peer.nickname} 钻进了兔子洞`);
+        // Initiate WebRTC connection to new peer
+        createPeerConnection(msg.peer.publicKey, true);
+      }
+      break;
+
+    case 'peer_left':
+      state.peers.delete(msg.publicKey);
+      closePeerConnection(msg.publicKey);
+      renderPeerList();
+      const leftPeer = state.peers.get(msg.publicKey);
+      log(`🕳️ ${leftPeer?.nickname || msg.publicKey.slice(0,8)} 离开了兔子洞`);
+      break;
+
+    case 'peer_updated':
+      if (state.peers.has(msg.publicKey)) {
+        state.peers.get(msg.publicKey).nickname = msg.nickname;
+        renderPeerList();
+      }
+      break;
+
+    case 'offer':
+      handleOffer(msg);
+      break;
+    case 'answer':
+      handleAnswer(msg);
+      break;
+    case 'ice-candidate':
+      handleIceCandidate(msg);
+      break;
+
+    case 'dm':
+      if (msg.msgId && state.seenMessages.has(msg.msgId)) break;
+      if (msg.msgId) state.seenMessages.add(msg.msgId);
+      addChatMessage(msg.fromName || msg.from.slice(0,8), msg.content, false, msg.timestamp);
+      state.messageCount++;
+      updateStats();
+      break;
+
+    case 'broadcast_msg':
+      if (msg.msgId && state.seenMessages.has(msg.msgId)) break;
+      if (msg.msgId) state.seenMessages.add(msg.msgId);
+      addChatMessage(msg.fromName || msg.from.slice(0,8), msg.content, false, msg.timestamp);
+      state.messageCount++;
+      updateStats();
+      break;
+
+    case 'carrot_update':
+      state.carrots = msg.carrots;
+      updateCarrotDisplay();
+      log(`🥕 ${msg.reason}`);
+      break;
+
+    case 'new_resource':
+      state.resourceMeta.set(msg.resource.id, msg.resource);
+      addResourceCard(msg.resource);
+      log(`📦 新资源: ${msg.resource.name}`);
+      break;
+
+    case 'resource_boosted':
+      log(`🔥 资源被竞价加速! +${msg.boostAmount}🥕`);
+      break;
+
+    case 'chunk_holders':
+      // Update chunk node display
+      break;
+  }
+}
+
+// ─── WebRTC ───
+function createPeerConnection(peerKey, isInitiator) {
+  if (state.pc.has(peerKey)) return;
+  if (peerKey === state.myPublicKey) return;
+
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  state.pc.set(peerKey, pc);
+
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      state.ws.send(JSON.stringify({
+        type: 'ice-candidate',
+        target: peerKey,
+        candidate: e.candidate
+      }));
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'connected') {
+      log(`🔗 P2P 直连成功: ${state.peers.get(peerKey)?.nickname || peerKey.slice(0,8)}`);
+    }
+  };
+
+  if (isInitiator) {
+    const dc = pc.createDataChannel('rabbit-hole');
+    setupDataChannel(dc, peerKey);
+    pc.createOffer().then(offer => {
+      pc.setLocalDescription(offer);
+      state.ws.send(JSON.stringify({ type: 'offer', target: peerKey, sdp: offer }));
+    });
+  } else {
+    pc.ondatachannel = (e) => {
+      setupDataChannel(e.channel, peerKey);
+    };
+  }
+}
+
+function setupDataChannel(dc, peerKey) {
+  dc.onopen = () => {
+    state.dataChannels.set(peerKey, dc);
+    log(`📡 数据通道已建立: ${state.peers.get(peerKey)?.nickname || peerKey.slice(0,8)}`);
+  };
+  dc.onclose = () => {
+    state.dataChannels.delete(peerKey);
+  };
+  dc.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'dm') {
+      if (data.msgId && state.seenMessages.has(data.msgId)) return;
+      if (data.msgId) state.seenMessages.add(data.msgId);
+      addChatMessage(data.fromName, data.content, false, data.timestamp);
+      state.messageCount++;
+      updateStats();
+    }
+  };
+}
+
+async function handleOffer(msg) {
+  createPeerConnection(msg.from, false);
+  const pc = state.pc.get(msg.from);
+  if (!pc) return;
+  await pc.setRemoteDescription(msg.sdp);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  state.ws.send(JSON.stringify({ type: 'answer', target: msg.from, sdp: answer }));
+}
+
+async function handleAnswer(msg) {
+  const pc = state.pc.get(msg.from);
+  if (pc) await pc.setRemoteDescription(msg.sdp);
+}
+
+async function handleIceCandidate(msg) {
+  const pc = state.pc.get(msg.from);
+  if (pc) await pc.addIceCandidate(msg.candidate);
+}
+
+function closePeerConnection(peerKey) {
+  const pc = state.pc.get(peerKey);
+  if (pc) { pc.close(); state.pc.delete(peerKey); }
+  state.dataChannels.delete(peerKey);
+}
+
+// ─── Send Messages ───
+function sendMessage(content) {
+  if (!content.trim()) return;
+  const msgId = crypto.randomUUID();
+  const timestamp = Date.now();
+  state.seenMessages.add(msgId);
+  state.ws.send(JSON.stringify({ type: 'broadcast_msg', content, msgId, timestamp }));
+  addChatMessage(state.myNickname, content, true, timestamp);
+  state.messageCount++;
+  updateStats();
+}
+
+// ─── File Upload & Chunking ───
+async function handleFileUpload(files) {
+  for (const file of files) {
+    const resourceId = crypto.randomUUID();
+    const CHUNK_SIZE = 64 * 1024; // 64KB chunks
+    const chunks = [];
+    const buffer = await file.arrayBuffer();
+    const totalChunks = Math.ceil(buffer.byteLength / CHUNK_SIZE);
+
+    log(`📦 正在分片: ${file.name} (${totalChunks} 片)`);
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, buffer.byteLength);
+      const chunk = buffer.slice(start, end);
+
+      // Hash the chunk
+      const hashBuffer = await crypto.subtle.digest('SHA-256', chunk);
+      const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      const chunkData = Array.from(new Uint8Array(chunk));
+
+      chunks.push({
+        index: i,
+        hash: hashHex,
+        size: chunk.byteLength,
+        data: chunkData
+      });
+
+      // Register chunk with server AND send data for relay storage
+      state.ws.send(JSON.stringify({
+        type: 'announce_chunk',
+        chunkHash: hashHex,
+        size: chunk.byteLength,
+        data: chunkData
+      }));
+      console.log(`[上传] 发送第 ${i+1}/${totalChunks} 片, hash=${hashHex.slice(0,12)}..., size=${chunk.byteLength}, dataLen=${chunkData.length}`);
+
+      state.chunks.add(hashHex);
+      state.contributions += chunk.byteLength;
+    }
+
+    // Publish resource
+    state.ws.send(JSON.stringify({
+      type: 'publish_resource',
+      resourceId,
+      name: file.name,
+      size: file.size,
+      chunks: chunks.map(c => ({ index: c.index, hash: c.hash, size: c.size }))
+    }));
+
+    // Store locally for instant re-download (best-effort, ignore quota errors)
+    try {
+      localStorage.setItem(`rh_resource_${resourceId}`, JSON.stringify({
+        name: file.name,
+        size: file.size,
+        chunks
+      }));
+    } catch (e) {
+      console.warn('[上传] localStorage 存储失败（可能超出配额）:', e.message);
+    }
+
+    updateStats();
+    log(`✅ ${file.name} 上传完成 (${totalChunks} 片已分布存储)`);
+  }
+}
+
+// ─── UI: Render ───
+function renderPeerList() {
+  const el = document.getElementById('peerList');
+  const colors = ['#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+  let html = '';
+
+  for (const [pk, peer] of state.peers) {
+    const color = colors[pk.charCodeAt(0) % colors.length];
+    const initial = (peer.nickname || '?')[0].toUpperCase();
+    html += `
+      <div class="peer-item ${state.selectedPeer === pk ? 'active' : ''}" onclick="selectPeer('${pk}')">
+        <div class="peer-avatar" style="background:${color}20;color:${color};">${initial}</div>
+        <div class="peer-info">
+          <div class="peer-name">${escapeHtml(peer.nickname)}</div>
+          <div class="peer-meta">🥕 ${peer.carrots} · ${formatTime(peer.joinedAt)}</div>
+        </div>
+        <div class="online-dot"></div>
+      </div>`;
+  }
+
+  el.innerHTML = html || '<div style="font-size:12px;color:var(--text2);padding:8px;">等待其他兔子加入...</div>';
+  document.getElementById('peerCount').textContent = state.peers.size;
+  updateStats();
+}
+
+function selectPeer(pk) {
+  state.selectedPeer = state.selectedPeer === pk ? null : pk;
+  renderPeerList();
+}
+
+function addChatMessage(sender, content, isMine, timestamp) {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = `msg ${isMine ? 'mine' : 'other'}`;
+  div.innerHTML = `${!isMine ? `<div class="sender">${escapeHtml(sender)}</div>` : ''}
+    <div>${escapeHtml(content)}</div>
+    <div class="time">${formatTime(timestamp)}</div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function addResourceCard(resource) {
+  // Skip duplicates — resource card already in DOM
+  if (document.getElementById(`res_${resource.id}`)) return;
+
+  const list = document.getElementById('marketList');
+  if (list.querySelector('.msg.system')) list.innerHTML = '';
+
+  const div = document.createElement('div');
+  div.className = `resource-card ${resource.boosted ? 'boosted' : ''}`;
+  div.id = `res_${resource.id}`;
+  div.innerHTML = `
+    <div class="resource-name">📄 ${escapeHtml(resource.name)}</div>
+    <div class="resource-meta">
+      ${formatSize(resource.size)} · ${resource.chunks?.length || '?'} 片 ·
+      发布者: ${escapeHtml(resource.publisherName || '匿名')} ·
+      ${resource.boosted ? '🔥 已竞价加速' : '普通'}
+    </div>
+    <div class="resource-actions">
+      <button class="btn-sm btn-download" onclick="downloadResource('${resource.id}')">⬇ 下载</button>
+      <button class="btn-sm btn-boost" onclick="boostResource('${resource.id}')">🥕 竞价加速</button>
+    </div>`;
+  list.prepend(div);
+}
+
+async function downloadResource(resourceId) {
+  const localData = localStorage.getItem(`rh_resource_${resourceId}`);
+  if (localData) {
+    // Local resource — assemble and download
+    const resource = JSON.parse(localData);
+    console.log('[下载] 命中本地缓存:', resource.name, resource.chunks.length, '片');
+    assembleAndDownload(resource);
+    return;
+  }
+
+  // Not local — fetch chunk metadata from server, then fetch each chunk's data
+  const resourceMeta = state.resourceMeta.get(resourceId);
+  if (!resourceMeta) {
+    toast('未找到资源元数据');
+    console.error('[下载] 未找到资源元数据, resourceId=', resourceId);
+    console.log('[下载] resourceMeta keys:', Array.from(state.resourceMeta.keys()));
+    return;
+  }
+
+  log(`⬇ 正在从网络获取: ${resourceMeta.name} (${resourceMeta.chunks.length} 片)`);
+  toast(`正在下载 ${resourceMeta.name}...`);
+  console.log('[下载] 开始下载:', resourceMeta.name, '共', resourceMeta.chunks.length, '片');
+
+  try {
+    // Batch fetch: request multiple chunks in parallel
+    const BATCH_SIZE = 5;
+    const chunks = new Array(resourceMeta.chunks.length);
+    
+    for (let batchStart = 0; batchStart < resourceMeta.chunks.length; batchStart += BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, resourceMeta.chunks.length);
+      const batchPromises = [];
+      
+      for (let i = batchStart; i < batchEnd; i++) {
+        const chunkMeta = resourceMeta.chunks[i];
+        batchPromises.push(
+          fetchChunkFromServer(chunkMeta.hash).then(data => {
+            if (!data) {
+              throw new Error(`碎片 ${i+1} 获取失败: ${chunkMeta.hash.slice(0,12)}...`);
+            }
+            console.log(`[下载] 第 ${i+1} 片获取成功, ${data.length} items`);
+            chunks[i] = {
+              index: chunkMeta.index,
+              hash: chunkMeta.hash,
+              size: chunkMeta.size,
+              data: data
+            };
+          })
+        );
+      }
+      
+      await Promise.all(batchPromises);
+      console.log(`[下载] 批次 ${batchStart+1}-${batchEnd}/${resourceMeta.chunks.length} 完成`);
+    }
+
+    const resource = {
+      name: resourceMeta.name,
+      size: resourceMeta.size,
+      chunks
+    };
+
+    // Cache locally for next time (best-effort, don't block download on quota errors)
+    try {
+      localStorage.setItem(`rh_resource_${resourceId}`, JSON.stringify(resource));
+    } catch (e) {
+      console.warn('[下载] localStorage 缓存失败（可能超出配额）:', e.message);
+    }
+    assembleAndDownload(resource);
+    log(`✅ ${resourceMeta.name} 下载完成`);
+  } catch (e) {
+    toast('下载失败: ' + e.message);
+    log(`❌ 下载异常: ${e.message}`);
+  }
+}
+
+function fetchChunkFromServer(chunkHash) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      state.ws.removeEventListener('message', handler);
+      console.error(`[fetchChunk] 超时: ${chunkHash.slice(0,12)}...`);
+      reject(new Error('超时'));
+    }, 15000);
+    const handler = (e) => {
+      let msg;
+      try { msg = JSON.parse(e.data); } catch { return; }
+      if (msg.type === 'chunk_data' && msg.chunkHash === chunkHash) {
+        state.ws.removeEventListener('message', handler);
+        clearTimeout(timeout);
+        resolve(msg.data);
+      }
+    };
+    state.ws.addEventListener('message', handler);
+    state.ws.send(JSON.stringify({ type: 'fetch_chunk', chunkHash }));
+  });
+}
+
+function assembleAndDownload(resource) {
+  const buffers = resource.chunks
+    .sort((a, b) => a.index - b.index)
+    .map(c => new Uint8Array(c.data));
+  const blob = new Blob(buffers);
+  console.log('[下载] 组装完成, blob.size=', blob.size);
+
+  // Use FileReader to create data URL — most reliable across all browsers
+  const reader = new FileReader();
+  reader.onload = () => {
+    console.log('[下载] FileReader 完成, dataURL长度:', reader.result.length);
+    const a = document.createElement('a');
+    a.href = reader.result;
+    a.download = resource.name;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    console.log('[下载] 即将触发 click...');
+    a.click();
+    setTimeout(() => {
+      a.remove();
+      console.log('[下载] <a> 已移除');
+    }, 500);
+    log(`⬇ 下载完成: ${resource.name} (${formatSize(blob.size)})`);
+    toast(`${resource.name} 下载完成`);
+  };
+  reader.onerror = (e) => {
+    console.error('[下载] FileReader 失败:', e);
+    toast('文件处理失败');
+    log(`❌ 文件处理失败: ${resource.name}`);
+  };
+  reader.readAsDataURL(blob);
+}
+
+function boostResource(resourceId) {
+  const amount = parseInt(prompt('投入多少胡萝卜竞价？', '10'));
+  if (amount && amount > 0 && amount <= state.carrots) {
+    state.ws.send(JSON.stringify({
+      type: 'boost_resource',
+      resourceId,
+      amount
+    }));
+  }
+}
+
+// ─── UI: Tabs ───
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tabChat').style.display = tab === 'chat' ? 'flex' : 'none';
+  document.getElementById('tabMarket').style.display = tab === 'market' ? 'flex' : 'none';
+  document.getElementById('tabMap').style.display = tab === 'map' ? 'flex' : 'none';
+  if (tab === 'map') drawMap();
+  // Sync mobile nav
+  if (window.innerWidth <= 768) {
+    document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.toggle('active', i.dataset.view === tab));
+  }
+}
+
+// ─── Mobile View Switch ───
+function mobileSwitchView(view) {
+  const main = document.querySelector('.main');
+  const sidebar = document.querySelector('.sidebar');
+  const rightpanel = document.querySelector('.rightpanel');
+
+  // Reset all
+  main.classList.remove('mobile-hidden');
+  sidebar.classList.remove('mobile-active');
+  rightpanel.classList.remove('mobile-active');
+  document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.toggle('active', i.dataset.view === view));
+
+  switch (view) {
+    case 'chat':
+      switchTab('chat');
+      break;
+    case 'market':
+      switchTab('market');
+      break;
+    case 'peers':
+      main.classList.add('mobile-hidden');
+      sidebar.classList.add('mobile-active');
+      break;
+    case 'map':
+      switchTab('map');
+      break;
+    case 'info':
+      main.classList.add('mobile-hidden');
+      rightpanel.classList.add('mobile-active');
+      break;
+  }
+}
+
+// ─── Node Map ───
+function drawMap() {
+  const canvas = document.getElementById('nodeMap');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = canvas.offsetHeight * 2;
+  ctx.scale(2, 2);
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+  ctx.fillStyle = '#0a0e17';
+  ctx.fillRect(0, 0, w, h);
+
+  const nodes = [{ pk: state.myPublicKey, nick: state.myNickname, isMe: true }];
+  for (const [pk, peer] of state.peers) {
+    nodes.push({ pk, nick: peer.nickname, isMe: false });
+  }
+
+  // Position nodes in a circle
+  const cx = w / 2, cy = h / 2, r = Math.min(w, h) * 0.35;
+  const positions = nodes.map((n, i) => {
+    const angle = (i / nodes.length) * Math.PI * 2 - Math.PI / 2;
+    return { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r, ...n };
+  });
+
+  // Draw connections
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i + 1; j < positions.length; j++) {
+      ctx.beginPath();
+      ctx.moveTo(positions[i].x, positions[i].y);
+      ctx.lineTo(positions[j].x, positions[j].y);
+      ctx.stroke();
+    }
+  }
+
+  // Draw P2P connections
+  ctx.strokeStyle = '#10b981';
+  ctx.lineWidth = 2;
+  for (const [pk] of state.dataChannels) {
+    const me = positions.find(p => p.isMe);
+    const them = positions.find(p => p.pk === pk);
+    if (me && them) {
+      ctx.beginPath();
+      ctx.moveTo(me.x, me.y);
+      ctx.lineTo(them.x, them.y);
+      ctx.stroke();
+    }
+  }
+
+  // Draw nodes
+  positions.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.isMe ? 10 : 7, 0, Math.PI * 2);
+    ctx.fillStyle = p.isMe ? '#f59e0b' : '#10b981';
+    ctx.fill();
+    ctx.fillStyle = '#e5e7eb';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.nick.slice(0, 6), p.x, p.y + 20);
+  });
+}
+
+// ─── Utils ───
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function updateCarrotDisplay() {
+  document.getElementById('carrotCount').textContent = state.carrots;
+  document.getElementById('panelCarrots').textContent = state.carrots;
+}
+
+function updateStats() {
+  document.getElementById('statNodes').textContent = state.peers.size + 1;
+  document.getElementById('statMsgs').textContent = state.messageCount;
+  document.getElementById('statChunks').textContent = state.chunks.size;
+  const contrib = formatSize(state.contributions);
+  document.getElementById('statContrib').textContent = contrib;
+  document.getElementById('panelContrib').textContent = contrib;
+}
+
+function log(text) {
+  const el = document.getElementById('activityLog');
+  const div = document.createElement('div');
+  div.textContent = `[${new Date().toLocaleTimeString('zh-CN')}] ${text}`;
+  el.prepend(div);
+  if (el.children.length > 50) el.removeChild(el.lastChild);
+}
+
+function toast(text) {
+  const div = document.createElement('div');
+  div.className = 'toast';
+  div.textContent = text;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+// ─── Init ───
+document.addEventListener('DOMContentLoaded', async () => {
+  state.myKeyPair = await generateKeyPair();
+  state.myPublicKey = state.myKeyPair.publicKey;
+  document.getElementById('keyInfo').textContent = `公钥: ${state.myPublicKey.slice(0, 24)}...`;
+
+  const savedNick = localStorage.getItem('rh_nickname');
+  if (savedNick) {
+    state.myNickname = savedNick;
+    document.getElementById('welcomeOverlay').classList.add('hidden');
+    document.getElementById('myId').textContent = savedNick;
+    document.getElementById('myPubKey').textContent = state.myPublicKey;
+    connectWS();
+  } else {
+    document.getElementById('enterBtn').addEventListener('click', () => {
+      const nick = document.getElementById('nicknameInput').value.trim() || `兔子${Math.floor(Math.random()*999)}`;
+      state.myNickname = nick;
+      localStorage.setItem('rh_nickname', nick);
+      document.getElementById('welcomeOverlay').classList.add('hidden');
+      document.getElementById('myId').textContent = nick;
+      document.getElementById('myPubKey').textContent = state.myPublicKey;
+      connectWS();
+    });
+    document.getElementById('nicknameInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('enterBtn').click();
+    });
+  }
+
+  // Chat
+  document.getElementById('sendBtn').addEventListener('click', () => {
+    const input = document.getElementById('chatInput');
+    sendMessage(input.value);
+    input.value = '';
+    input.focus();
+  });
+  document.getElementById('chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const input = document.getElementById('chatInput');
+      sendMessage(input.value);
+      input.value = '';
+    }
+  });
+
+  // File upload
+  document.getElementById('fileInput').addEventListener('change', (e) => {
+    handleFileUpload(e.target.files);
+  });
+
+  // Copy public key
+  document.getElementById('myId').addEventListener('click', () => {
+    navigator.clipboard?.writeText(state.myPublicKey);
+    toast('公钥已复制');
+  });
+
+  // Auto-resize map
+  window.addEventListener('resize', () => {
+    if (document.getElementById('tabMap').style.display !== 'none') drawMap();
+  });
+});
+</script>
+</body>
+</html>
